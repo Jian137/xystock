@@ -6,6 +6,7 @@ A股市场工具 - 统一的数据获取和缓存管理
 
 import os
 import sys
+import time
 import warnings
 from datetime import datetime
 from typing import Dict
@@ -198,42 +199,85 @@ def fetch_valuation_data(debug=False) -> tuple:
     }
     
     for index_name, index_code in valuation_indices.items():
-        try:
-            print(f"   获取{index_name}估值...")
-            df_index = ak.stock_zh_index_value_csindex(index_code)
-            if not df_index.empty:
-                if debug:
-                    print(f"{index_name}数据:")
-                    print(df_index.tail(3))
+        max_retries = 2
+        retry_delay = 2  # 秒
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"   获取{index_name}估值...", end='')
+                if attempt > 0:
+                    print(f" (重试 {attempt}/{max_retries-1})", end='')
+                print()
+                
+                # 添加延迟以避免频率限制
+                if attempt > 0:
+                    time.sleep(retry_delay * attempt)
+                
+                df_index = ak.stock_zh_index_value_csindex(index_code)
+                if not df_index.empty:
+                    if debug:
+                        print(f"{index_name}数据:")
+                        print(df_index.tail(3))
+                        
+                    latest_data = df_index.iloc[-1]
                     
-                latest_data = df_index.iloc[-1]
+                    # 生成统一的数据key
+                    index_key = index_name.lower().replace('沪深', 'hs').replace('中证', 'zz')
+                    
+                    pe_value = latest_data.get('市盈率1', 0)
+                    dividend_yield = latest_data.get('股息率1', 0)
+                    date_value = latest_data.get('日期', datetime.now().strftime('%Y-%m-%d'))
+                    
+                    # 存储指数估值数据
+                    valuation_data[f'{index_key}_pe'] = float(pe_value) if pe_value else 0
+                    valuation_data[f'{index_key}_dividend_yield'] = float(dividend_yield) if dividend_yield else 0
+                    valuation_data[f'{index_key}_date'] = str(date_value)
+                    
+                    # 同时保留原有的hs300格式以兼容现有代码
+                    if index_name == '沪深300':
+                        valuation_data.update({
+                            'hs300_pe': float(pe_value) if pe_value else 0,
+                            'hs300_dividend_yield': float(dividend_yield) if dividend_yield else 0,
+                            'hs300_date': str(date_value),
+                        })
+                    
+                    print(f"      ✅ {index_name} PE: {pe_value:.2f}")
+                    break  # 成功，退出重试循环
+                else:
+                    print(f"      ⚠️ {index_name}数据为空")
+                    if attempt < max_retries - 1:
+                        continue
+                    else:
+                        ret = False
+                        break
+                    
+            except Exception as e:
+                error_str = str(e)
+                is_403_error = '403' in error_str or 'Forbidden' in error_str
                 
-                # 生成统一的数据key
-                index_key = index_name.lower().replace('沪深', 'hs').replace('中证', 'zz')
-                
-                pe_value = latest_data.get('市盈率1', 0)
-                dividend_yield = latest_data.get('股息率1', 0)
-                date_value = latest_data.get('日期', datetime.now().strftime('%Y-%m-%d'))
-                
-                # 存储指数估值数据
-                valuation_data[f'{index_key}_pe'] = float(pe_value) if pe_value else 0
-                valuation_data[f'{index_key}_dividend_yield'] = float(dividend_yield) if dividend_yield else 0
-                valuation_data[f'{index_key}_date'] = str(date_value)
-                
-                # 同时保留原有的hs300格式以兼容现有代码
-                if index_name == '沪深300':
-                    valuation_data.update({
-                        'hs300_pe': float(pe_value) if pe_value else 0,
-                        'hs300_dividend_yield': float(dividend_yield) if dividend_yield else 0,
-                        'hs300_date': str(date_value),
-                    })
-                
-                print(f"      {index_name} PE: {pe_value:.2f}")
-                
-        except Exception as e:
-            print(f"   ❌ 获取{index_name}估值失败: {e}")
-            ret = False
-            continue
+                if attempt < max_retries - 1:
+                    if is_403_error:
+                        print(f"      ⚠️ 访问被拒绝（403），等待 {retry_delay * (attempt + 1)} 秒后重试...")
+                    else:
+                        print(f"      ⚠️ 获取失败，等待 {retry_delay * (attempt + 1)} 秒后重试...")
+                    continue
+                else:
+                    # 最后一次尝试失败
+                    if is_403_error:
+                        print(f"   ❌ 获取{index_name}估值失败: HTTP 403 Forbidden")
+                        print(f"      提示: 中证指数数据源可能限制了访问，建议:")
+                        print(f"      1. 检查网络连接")
+                        print(f"      2. 更新 akshare 库: pip install --upgrade akshare")
+                        print(f"      3. 稍后重试（可能是频率限制）")
+                        print(f"      4. 使用缓存数据（如果可用）")
+                    else:
+                        print(f"   ❌ 获取{index_name}估值失败: {e}")
+                    ret = False
+                    break
+        
+        # 在请求之间添加小延迟，避免频率限制
+        if index_name != list(valuation_indices.keys())[-1]:  # 不是最后一个
+            time.sleep(0.5)
     
     # 如果没有获取到任何估值数据，标记为失败
     if not any(key.endswith('_pe') for key in valuation_data.keys()):

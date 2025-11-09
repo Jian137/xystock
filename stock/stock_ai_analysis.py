@@ -5,7 +5,6 @@
 
 from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
-from llm.openai_client import OpenAIClient
 import datetime
 import sys
 import os
@@ -304,8 +303,85 @@ class BaseAnalysisGenerator:
     """基础分析生成器 - 提供通用的分析生成功能"""
     
     def __init__(self):
-        self.client = OpenAIClient()
+        # 根据配置自动选择 LLM 客户端
+        self.client = self._create_llm_client()
         self.config_manager = AnalysisConfig()
+    
+    def _create_llm_client(self):
+        """根据配置自动创建 LLM 客户端（OpenAI 或 Google）"""
+        try:
+            from config_manager import config as config_manager
+            
+            # 优先检查 Google API 配置（使用点号分隔的键路径）
+            google_api_key = config_manager.get('LLM_GOOGLE.API_KEY', '')
+            if isinstance(google_api_key, str):
+                google_api_key = google_api_key.strip()
+            else:
+                google_api_key = ''
+            
+            # 检查 OpenAI API 配置
+            openai_api_key = config_manager.get('LLM_OPENAI.API_KEY', '')
+            if isinstance(openai_api_key, str):
+                openai_api_key = openai_api_key.strip()
+            else:
+                openai_api_key = ''
+            
+            # 调试输出
+            print(f"🔍 检查配置: Google API Key = {'已配置' if google_api_key else '未配置'}, OpenAI API Key = {'已配置' if openai_api_key and openai_api_key != 'sk-' else '未配置'}")
+            
+            # 如果配置了 Google API Key，使用 Google 客户端
+            if google_api_key:
+                try:
+                    from llm.google_client import GoogleClient
+                    print("✅ 尝试使用 Google Gemini API...")
+                    client = GoogleClient()
+                    print("✅ Google Gemini API 客户端初始化成功")
+                    return client
+                except ImportError as e:
+                    print(f"⚠️  Google API 库未安装: {e}")
+                    print("   请运行: pip install google-generativeai")
+                    # 继续尝试其他方法
+                except Exception as e:
+                    print(f"⚠️  初始化 Google 客户端失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # 继续尝试其他方法
+            
+            # 如果配置了 OpenAI API Key，使用 OpenAI 客户端
+            if openai_api_key and openai_api_key != 'sk-':
+                try:
+                    from llm.openai_client import OpenAIClient
+                    print("✅ 使用 OpenAI API")
+                    return OpenAIClient()
+                except Exception as e:
+                    print(f"⚠️  初始化 OpenAI 客户端失败: {e}")
+            
+            # 如果都没有配置，尝试使用 Google（可能通过环境变量配置）
+            try:
+                from llm.google_client import GoogleClient
+                print("✅ 尝试使用 Google Gemini API（从环境变量）")
+                return GoogleClient()
+            except:
+                pass
+            
+            # 最后尝试 OpenAI
+            try:
+                from llm.openai_client import OpenAIClient
+                print("✅ 尝试使用 OpenAI API（从环境变量）")
+                return OpenAIClient()
+            except Exception as e:
+                raise ValueError(
+                    "未找到可用的 LLM API 配置。\n"
+                    "请在 config.toml 中配置 LLM_GOOGLE.API_KEY 或 LLM_OPENAI.API_KEY\n"
+                    f"当前检测: Google API Key = {'已配置' if google_api_key else '未配置'}, "
+                    f"OpenAI API Key = {'已配置' if openai_api_key and openai_api_key != 'sk-' else '未配置'}"
+                )
+                
+        except Exception as e:
+            print(f"❌ 创建 LLM 客户端失败: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     def generate_analysis(self, analysis_type: str, messages: List[Dict], stock_code: str = "") -> AnalysisResult:
         """通用的分析生成方法"""

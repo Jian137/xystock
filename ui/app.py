@@ -16,6 +16,7 @@ from ui.components.page_token_stats import main as display_token_stats
 from ui.components.page_stock import display_stock_info
 from ui.components.page_market_overview import display_market_overview
 from ui.components.page_cache_management import main as display_cache_management
+from ui.components.page_batch_analysis import display_batch_analysis_page
 from stock.stock_code_map import get_stock_identity
 from ui.config import FULL_VERSION
 
@@ -59,7 +60,7 @@ def main():
         
         menu = st.radio(
             "选择功能:",
-            ["大盘分析", "股票分析", "缓存管理", "Token统计", "设置"],
+            ["大盘分析", "股票分析", "批量分析", "缓存管理", "Token统计", "设置"],
             index=0,
             help="选择要使用的功能模块"
         )
@@ -73,6 +74,8 @@ def main():
         display_market_overview()
     elif menu == "股票分析":
         display_analysis_page()
+    elif menu == "批量分析":
+        display_batch_analysis_page()
     elif menu == "缓存管理":
         display_cache_management()
     elif menu == "Token统计":

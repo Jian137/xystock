@@ -49,6 +49,7 @@ anthropic>=0.60.0        # ✓
 langchain>=0.3.0         # ✓
 langchain-openai>=0.3.0  # ✓
 langchain-anthropic>=0.3.0  # ✓
+google-generativeai>=0.3.0  # Google Gemini API ✓
 langchain-google-genai>=2.0.0  # ✓
 langchain-experimental>=0.3.0  # ✓
 langchain-community>=0.3.0     # ✓

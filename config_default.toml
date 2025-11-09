@@ -6,8 +6,19 @@ TIMEOUT = 60  # 请求超时时间（秒）
 MAX_RETRIES = 3  # 最大重试次数
 
 # 默认模型配置
-DEFAULT_MODEL = "deepseek-chat"
-INFERENCE_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "/root/.cache/huggingface/DeepSeek-R1-Distill-Qwen-1.5B"
+INFERENCE_MODEL = "/root/.cache/huggingface/DeepSeek-R1-Distill-Qwen-1.5B"
+DEFAULT_TEMPERATURE = 0.7
+
+[LLM_GOOGLE]
+# Google Gemini API 配置
+API_KEY = ""  # Google API Key，从 https://makersuite.google.com/app/apikey 获取
+TIMEOUT = 60  # 请求超时时间（秒）
+MAX_RETRIES = 3  # 最大重试次数
+
+# 默认模型配置
+DEFAULT_MODEL = "gemini-pro"  # 默认模型：gemini-pro, gemini-pro-vision 等
+INFERENCE_MODEL = "gemini-pro"  # 推理模型
 DEFAULT_TEMPERATURE = 0.7
 
 [LLM_LOGGING]
@@ -61,3 +72,13 @@ CUSTOM_PRINCIPLES = ""  # 自定义核心原则（当RISK_PREFERENCE为custom时
 # 用户画像配置
 RAW = ""  # 用户画像描述
 MISTAKES = []  # 用户常犯错误列表
+
+[EMAIL]
+# 邮件发送配置
+ENABLED = false  # 是否启用邮件功能
+SMTP_SERVER = "smtp.163.com"  # SMTP服务器地址（QQ邮箱示例）
+SMTP_PORT = 587  # SMTP端口
+SENDER_EMAIL = "xxx"  # 发送者邮箱
+SENDER_PASSWORD = "xxx"  # 发送者邮箱密码或授权码
+USE_TLS = true  # 是否使用TLS加密
+RECIPIENT_EMAILS = ["xxx.xxx@xxx.xxx"]  # 收件人邮箱列表

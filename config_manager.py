@@ -47,6 +47,14 @@ class ConfigManager:
                 'INFERENCE_MODEL': 'deepseek-chat',
                 'DEFAULT_TEMPERATURE': 0.7
             },
+            'LLM_GOOGLE': {
+                'API_KEY': os.getenv('GOOGLE_API_KEY', ''),
+                'TIMEOUT': 60,
+                'MAX_RETRIES': 3,
+                'DEFAULT_MODEL': 'gemini-pro',
+                'INFERENCE_MODEL': 'gemini-pro',
+                'DEFAULT_TEMPERATURE': 0.7
+            },
             'LLM_LOGGING': {
                 'USAGE_LOG_FILE': 'data/logs/openai_usage.csv',
                 'ENABLE_LOGGING': True,
@@ -117,6 +125,10 @@ class ConfigManager:
         """获取OpenAI相关配置"""
         return self.get('LLM_OPENAI', {})
     
+    def get_google_config(self) -> Dict[str, Any]:
+        """获取Google Gemini相关配置"""
+        return self.get('LLM_GOOGLE', {})
+    
     def get_logging_config(self) -> Dict[str, Any]:
         """获取日志相关配置"""
         return self.get('LLM_LOGGING', {})
@@ -132,6 +144,18 @@ class ConfigManager:
     def is_market_news_enabled(self) -> bool:
         """检查是否启用市场新闻功能"""
         return self.get('MARKET.ENABLE_NEWS', True)
+    
+    def get_section(self, section: str) -> Optional[Dict[str, Any]]:
+        """
+        获取配置节
+        
+        Args:
+            section: 配置节名称
+        
+        Returns:
+            配置节字典，如果不存在则返回None
+        """
+        return self.config.get(section)
     
     def reload(self):
         """重新加载配置"""

@@ -8,3 +8,5 @@ config.toml
 data/
 reports/
 notebook/
+*.json
+*.markdown
